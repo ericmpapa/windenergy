@@ -110,6 +110,8 @@ class SupabaseDatasource extends DatabaseDatasource {
       throw ServerException(
         message: "Une erreur s'est produite sur le serveur",
       );
+    } on AuthWeakPasswordException catch (e) {
+      throw ServerException(message: "Le mot de passe est trop faible.");
     } on AuthException catch (e) {
       var message = "Une erreur s'est produite sur le serveur";
       if (e.code == "user_already_exists") {

@@ -20,7 +20,7 @@ class EolienneRepositoryImpl extends EolienneRepository {
   @override
   FutureResultat authentifier(String email, String motDePasse) async {
     try {
-      return await databaseDatasource.authentifier(email,motDePasse);
+      return await databaseDatasource.authentifier(email, motDePasse);
     } on ServerException catch (e) {
       return Echec(message: e.message);
     }
@@ -36,7 +36,7 @@ class EolienneRepositoryImpl extends EolienneRepository {
   }
 
   @override
-  FutureResultat consulterListeEoliennes() async{
+  FutureResultat consulterListeEoliennes() async {
     try {
       return await databaseDatasource.consulterListeEoliennes();
     } on ServerException catch (e) {
@@ -52,7 +52,12 @@ class EolienneRepositoryImpl extends EolienneRepository {
     String motDePasse,
   ) async {
     try {
-      return await databaseDatasource.enregistrer(email,nom,prenom,motDePasse);
+      return await databaseDatasource.enregistrer(
+        email,
+        nom,
+        prenom,
+        motDePasse,
+      );
     } on ServerException catch (e) {
       return Echec(message: e.message);
     }

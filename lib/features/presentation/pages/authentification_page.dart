@@ -50,7 +50,12 @@ class AuthentificationPage extends StatelessWidget {
               style: GoogleFonts.inter(color: couleurPrincipale, fontSize: 14),
             ),
             SizedBox(height: 20),
-            WindenergyButton(libelle: "s'enregistrer", onPressed: () {}),
+            WindenergyButton(
+              libelle: "s'enregistrer",
+              onPressed: () {
+                Navigator.of(context).pushReplacementNamed('/enregistrer');
+              },
+            ),
           ],
         ),
       ),

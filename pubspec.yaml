@@ -43,6 +43,8 @@ dependencies:
   bloc_test: ^10.0.0
   flutter_svg: ^2.2.2
   google_fonts: ^6.3.2
+  get_it: ^9.2.0
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +74,7 @@ flutter:
      - design/mat_eolienne.svg
      - design/pales_eolienne.svg
      - design/pales_eolienne2.svg
+     - .env
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
