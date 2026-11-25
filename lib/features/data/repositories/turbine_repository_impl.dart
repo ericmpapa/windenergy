@@ -1,3 +1,5 @@
+import 'package:get_it/get_it.dart';
+import 'package:windenergy/features/data/repositories/session.dart';
 import 'package:windenergy/features/data/services/db_service.dart';
 import 'package:windenergy/features/domain/entities/pairing_code.dart';
 import 'package:windenergy/features/domain/entities/position.dart';
@@ -13,7 +15,8 @@ class TurbineRepositoryImpl extends TurbineRepository{
   @override
   FutureResult<int> createTurbine({String serialNumber = "", String customName ="",Position position = const Position()}) async {
     try{
-      return await dbService.createTurbine(serialNumber: serialNumber, customName: customName, position: position);
+      final session = GetIt.instance.get<Session>();
+      return await dbService.createTurbine(userId:session.userId,serialNumber: serialNumber, customName: customName, position: position);
     } on ServerException catch(e){
       return Error(reason: e.reason);
     }
@@ -31,7 +34,8 @@ class TurbineRepositoryImpl extends TurbineRepository{
   @override
   FutureResult<int> readCount() async {
     try{
-      return await dbService.readCount();
+      final session = GetIt.instance.get<Session>();
+      return await dbService.readCount(userId: session.userId);
     } on ServerException catch(e){
       return Error(reason: e.reason);
     }
@@ -49,7 +53,8 @@ class TurbineRepositoryImpl extends TurbineRepository{
   @override
   FutureResult<double> readTotalPowerW() async {
     try{
-      return await dbService.readTotalPowerW();
+      final session = GetIt.instance.get<Session>();
+      return await dbService.readTotalPowerW(userId: session.userId);
     } on ServerException catch(e){
       return Error(reason: e.reason);
     }
@@ -67,7 +72,8 @@ class TurbineRepositoryImpl extends TurbineRepository{
   @override
   FutureResult<List<Turbine>> readTurbines() async {
     try{
-      return await dbService.readTurbines();
+      final session = GetIt.instance.get<Session>();
+      return await dbService.readTurbines(userId: session.userId);
     } on ServerException catch(e){
       return Error(reason:e.reason);
     }
