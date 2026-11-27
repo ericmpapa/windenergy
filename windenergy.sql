@@ -9,7 +9,7 @@ volatile
 set search_path = ''
 as $$
 declare
-    chars text := 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+chars text := 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     chars_len int := length(chars);
     result text := '';
     rand_bytes bytea;
@@ -18,26 +18,26 @@ declare
 begin
     rand_bytes := gen_random_bytes(10);
 
-    for i in 0..9 loop
+for i in 0..9 loop
         idx := (get_byte(rand_bytes, i) % chars_len) + 1;
         result := result || substr(chars, idx, 1);
-    end loop;
+end loop;
 
-    return result;
+return result;
 end;
 $$;
 
 -- Création des tables
 create table if not exists public.profiles (
-    id uuid primary key references auth.users(id) on delete cascade,
+                                               id uuid primary key references auth.users(id) on delete cascade,
     full_name text,
     email text,
     created_at timestamptz default now()
-);
+    );
 
 create table if not exists public.turbines (
-    id serial primary key,
-    profile_id uuid references public.profiles(id),
+                                               id serial primary key,
+                                               profile_id uuid references public.profiles(id),
     serial_number text unique,
     custom_name text,
     sec_hash_code uuid,
@@ -46,7 +46,7 @@ create table if not exists public.turbines (
     activated boolean default false,
     last_seen_at timestamptz default now(),
     created_at timestamptz default now()
-);
+    );
 
 create or replace view public.turbines_with_status as
 select
@@ -54,17 +54,17 @@ select
     case
         when extract(epoch from (now() - t.last_seen_at)) >= 30 then 'INACTIVE'
         else 'ACTIVE'
-    end as status
+        end as status
 from public.turbines t;
 
 create table if not exists public.pairing_codes (
-    turbine_id integer references public.turbines(id) on delete cascade,
+                                                    turbine_id integer references public.turbines(id) on delete cascade,
     code_hash text default public.random_alphanumeric_10(),
     created_at timestamptz default now(),
     expires_at timestamptz default (now() + interval '15 minutes'),
     validated_at timestamptz,
     primary key (turbine_id, created_at)
-);
+    );
 
 create or replace view public.pairing_codes_with_status as
 select
@@ -72,35 +72,33 @@ select
     case
         when pc.validated_at is null and pc.expires_at > now() then 'VALID'
         else 'INVALID'
-    end as status
+        end as status
 from public.pairing_codes pc;
 
 create table if not exists public.telemetries (
-    turbine_id integer references public.turbines(id) on delete cascade,
+                                                  turbine_id integer references public.turbines(id) on delete cascade,
     power_w double precision,
     rotation_rpm double precision,
     orientation_deg double precision,
     recorded_at timestamptz default now(),
     received_at timestamptz default now(),
     primary key (turbine_id, recorded_at)
-);
+    );
 
 create table if not exists public.telemetries_hourly (
-    turbine_id integer references public.turbines(id) on delete cascade,
+                                                         turbine_id integer references public.turbines(id) on delete cascade,
     avg_power_w double precision,
     max_power_w double precision,
     energy_wh double precision,
     avg_rpm double precision,
     bucket_start timestamptz default now(),
     primary key (turbine_id, bucket_start)
-);
+    );
 
 -- Privilèges sur les tables
 grant select, insert, update, delete on public.profiles to authenticated, service_role;
-grant select, insert, update, delete on public.turbines_with_status to authenticated, service_role;
 grant select, insert, update, delete on public.turbines to authenticated, service_role;
 grant select, insert, update, delete on public.pairing_codes to authenticated, service_role;
-grant select, insert, update, delete on public.pairing_codes_with_status to authenticated, service_role;
 grant insert on public.telemetries to anon;
 grant select, insert, update, delete on public.telemetries to authenticated, service_role;
 grant select, insert, update, delete on public.telemetries_hourly to authenticated, service_role;
@@ -108,9 +106,7 @@ grant select, insert, update, delete on public.telemetries_hourly to authenticat
 -- Activation du Row Level Security (RLS)
 alter table public.profiles enable row level security;
 alter table public.turbines enable row level security;
-alter table public.turbines_with_status enable row level security;
 alter table public.pairing_codes enable row level security;
-alter table public.pairing_codes_with_status enable row level security;
 alter table public.telemetries enable row level security;
 alter table public.telemetries_hourly enable row level security;
 
@@ -122,9 +118,9 @@ security definer
 set search_path = ''
 as $$
 begin
-    insert into public.profiles (id, email, full_name)
-    values (new.id, new.email, new.raw_user_meta_data ->> 'full_name');
-    return new;
+insert into public.profiles (id, email, full_name)
+values (new.id, new.email, new.raw_user_meta_data ->> 'full_name');
+return new;
 end;
 $$;
 
@@ -136,20 +132,20 @@ create trigger on_auth_user_created
 -- Politiques RLS : profiles
 create policy "Users can view their own profile"
 on public.profiles for select
-to authenticated
-using ((select auth.uid()) = id);
+                                  to authenticated
+                                  using ((select auth.uid()) = id);
 
 create policy "Users can update their own profile"
 on public.profiles for update
-to authenticated
-using ((select auth.uid()) = id)
-with check ((select auth.uid()) = id);
+                                  to authenticated
+                                  using ((select auth.uid()) = id)
+                       with check ((select auth.uid()) = id);
 
 -- Politiques RLS : turbines
 create policy "Users can select their own turbines"
 on public.turbines for select
-to authenticated
-using ((select auth.uid()) = profile_id and activated = true);
+                                  to authenticated
+                                  using ((select auth.uid()) = profile_id and activated = true);
 
 create policy "Users can insert their own turbines"
 on public.turbines for insert
@@ -158,71 +154,42 @@ with check ((select auth.uid()) = profile_id);
 
 create policy "Users can update their own turbines"
 on public.turbines for update
-to authenticated
-using ((select auth.uid()) = profile_id)
-with check ((select auth.uid()) = profile_id);
+                                         to authenticated
+                                         using ((select auth.uid()) = profile_id)
+                       with check ((select auth.uid()) = profile_id);
 
 create policy "Users can delete their own turbines"
 on public.turbines for delete
 to authenticated
 using ((select auth.uid()) = profile_id);
 
-
-
-
-
-
--- Politiques RLS : turbines
-create policy "Users can select their own turbines"
-on public.turbines_with_status for select
-to authenticated
-using ((select auth.uid()) = profile_id and activated = true);
-
-create policy "Users can insert their own turbines"
-on public.turbines_with_status for insert
-to authenticated
-with check ((select auth.uid()) = profile_id);
-
-create policy "Users can update their own turbines"
-on public.turbines_with_status for update
-to authenticated
-using ((select auth.uid()) = profile_id)
-with check ((select auth.uid()) = profile_id);
-
-create policy "Users can delete their own turbines"
-on public.turbines_with_status for delete
-to authenticated
-using ((select auth.uid()) = profile_id);
-
-
-
 -- Politiques RLS : telemetries
 create policy "Users can select their own turbines telemetry"
 on public.telemetries for select
-to authenticated
-using (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.telemetries.turbine_id
-          and t.activated = true
-          and t.profile_id = (select auth.uid())
-    )
-);
+                                     to authenticated
+                                     using (
+                                     exists (
+                                     select 1
+                                     from public.turbines t
+                                     where t.id = public.telemetries.turbine_id
+                                     and t.activated = true
+                                     and t.profile_id = (select auth.uid())
+                                     )
+                                     );
 
 -- Politiques RLS : telemetries_hourly
 create policy "Users can select their own turbines telemetry hourly aggregates"
 on public.telemetries_hourly for select
-to authenticated
-using (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.telemetries_hourly.turbine_id
-          and t.activated = true
-          and t.profile_id = (select auth.uid())
-    )
-);
+                                            to authenticated
+                                            using (
+                                            exists (
+                                            select 1
+                                            from public.turbines t
+                                            where t.id = public.telemetries_hourly.turbine_id
+                                            and t.activated = true
+                                            and t.profile_id = (select auth.uid())
+                                            )
+                                            );
 
 create policy "Users can insert their own turbines telemetry hourly aggregates"
 on public.telemetries_hourly for insert
@@ -239,25 +206,25 @@ with check (
 
 create policy "Users can update their own turbines telemetry hourly aggregates"
 on public.telemetries_hourly for update
-to authenticated
-using (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.telemetries_hourly.turbine_id
-          and t.activated = true
-          and t.profile_id = (select auth.uid())
-    )
-)
-with check (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.telemetries_hourly.turbine_id
-          and t.activated = true
-          and t.profile_id = (select auth.uid())
-    )
-);
+                                                   to authenticated
+                                                   using (
+                                                   exists (
+                                                   select 1
+                                                   from public.turbines t
+                                                   where t.id = public.telemetries_hourly.turbine_id
+                                                   and t.activated = true
+                                                   and t.profile_id = (select auth.uid())
+                                                   )
+                                                   )
+                                 with check (
+                                                   exists (
+                                                   select 1
+                                                   from public.turbines t
+                                                   where t.id = public.telemetries_hourly.turbine_id
+                                                   and t.activated = true
+                                                   and t.profile_id = (select auth.uid())
+                                                   )
+                                                   );
 
 create policy "Users can delete their own turbines telemetry hourly aggregates"
 on public.telemetries_hourly for delete
@@ -275,15 +242,15 @@ using (
 -- Politiques RLS : pairing_codes
 create policy "Users can select their own turbines pairing codes"
 on public.pairing_codes for select
-to authenticated
-using (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.pairing_codes.turbine_id
-          and t.profile_id = (select auth.uid())
-    )
-);
+                                       to authenticated
+                                       using (
+                                       exists (
+                                       select 1
+                                       from public.turbines t
+                                       where t.id = public.pairing_codes.turbine_id
+                                       and t.profile_id = (select auth.uid())
+                                       )
+                                       );
 
 create policy "Users can insert their own turbines pairing codes"
 on public.pairing_codes for insert
@@ -299,23 +266,23 @@ with check (
 
 create policy "Users can update their own turbines pairing codes"
 on public.pairing_codes for update
-to authenticated
-using (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.pairing_codes.turbine_id
-          and t.profile_id = (select auth.uid())
-    )
-)
-with check (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.pairing_codes.turbine_id
-          and t.profile_id = (select auth.uid())
-    )
-);
+                                              to authenticated
+                                              using (
+                                              exists (
+                                              select 1
+                                              from public.turbines t
+                                              where t.id = public.pairing_codes.turbine_id
+                                              and t.profile_id = (select auth.uid())
+                                              )
+                                              )
+                            with check (
+                                              exists (
+                                              select 1
+                                              from public.turbines t
+                                              where t.id = public.pairing_codes.turbine_id
+                                              and t.profile_id = (select auth.uid())
+                                              )
+                                              );
 
 create policy "Users can delete their own turbines pairing codes"
 on public.pairing_codes for delete
@@ -328,70 +295,6 @@ using (
           and t.profile_id = (select auth.uid())
     )
 );
-
-
-
-
-
--- Politiques RLS : pairing_codes
-create policy "Users can select their own turbines pairing codes"
-on public.pairing_codes_with_status for select
-to authenticated
-using (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.pairing_codes.turbine_id
-          and t.profile_id = (select auth.uid())
-    )
-);
-
-create policy "Users can insert their own turbines pairing codes"
-on public.pairing_codes_with_status for insert
-to authenticated
-with check (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.pairing_codes.turbine_id
-          and t.profile_id = (select auth.uid())
-    )
-);
-
-create policy "Users can update their own turbines pairing codes"
-on public.pairing_codes_with_status for update
-to authenticated
-using (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.pairing_codes.turbine_id
-          and t.profile_id = (select auth.uid())
-    )
-)
-with check (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.pairing_codes.turbine_id
-          and t.profile_id = (select auth.uid())
-    )
-);
-
-create policy "Users can delete their own turbines pairing codes"
-on public.pairing_codes_with_status for delete
-to authenticated
-using (
-    exists (
-        select 1
-        from public.turbines t
-        where t.id = public.pairing_codes.turbine_id
-          and t.profile_id = (select auth.uid())
-    )
-);
-
-
-
 
 -- Insertion d'une télémétrie par la turbine
 create or replace function public.turbine_insert_telemetry(
@@ -408,32 +311,32 @@ security definer
 set search_path = ''
 as $$
 declare
-    v_turbine_id integer;
+v_turbine_id integer;
     v_sec_hash uuid;
 begin
-    begin
+begin
         v_sec_hash := p_sec_hash_code::uuid;
-    exception when invalid_text_representation then
+exception when invalid_text_representation then
         return;
-    end;
+end;
 
-    select t.id
-    into v_turbine_id
-    from public.turbines t
-    where t.serial_number = p_serial_number
-      and t.sec_hash_code = v_sec_hash
-      and t.activated = true;
+select t.id
+into v_turbine_id
+from public.turbines t
+where t.serial_number = p_serial_number
+  and t.sec_hash_code = v_sec_hash
+  and t.activated = true;
 
-    if v_turbine_id is null then
+if v_turbine_id is null then
         return;
-    end if;
+end if;
 
-    update public.turbines
-    set last_seen_at = now()
-    where id = v_turbine_id;
+update public.turbines
+set last_seen_at = now()
+where id = v_turbine_id;
 
-    insert into public.telemetries (turbine_id, power_w, rotation_rpm, orientation_deg)
-    values (v_turbine_id, p_power_w, p_rotation_rpm, p_orientation_deg);
+insert into public.telemetries (turbine_id, power_w, rotation_rpm, orientation_deg)
+values (v_turbine_id, p_power_w, p_rotation_rpm, p_orientation_deg);
 end;
 $$;
 
@@ -449,37 +352,37 @@ security definer
 set search_path = ''
 as $$
 declare
-    v_turbine_id integer;
+v_turbine_id integer;
     v_sec_hash_code uuid;
 begin
-    select t.id
-    into v_turbine_id
-    from public.pairing_codes pc
-    join public.turbines t on t.id = pc.turbine_id
-    where t.serial_number = p_serial_number
-      and pc.code_hash = p_hash_code
-      and pc.validated_at is null
-      and pc.expires_at > now()
-    order by pc.created_at desc
+select t.id
+into v_turbine_id
+from public.pairing_codes pc
+         join public.turbines t on t.id = pc.turbine_id
+where t.serial_number = p_serial_number
+  and pc.code_hash = p_hash_code
+  and pc.validated_at is null
+  and pc.expires_at > now()
+order by pc.created_at desc
     limit 1;
 
-    if v_turbine_id is null then
+if v_turbine_id is null then
         return null;
-    end if;
+end if;
 
     v_sec_hash_code := gen_random_uuid();
 
-    update public.pairing_codes
-    set validated_at = now()
-    where turbine_id = v_turbine_id
-      and code_hash = p_hash_code
-      and validated_at is null;
+update public.pairing_codes
+set validated_at = now()
+where turbine_id = v_turbine_id
+  and code_hash = p_hash_code
+  and validated_at is null;
 
-    update public.turbines
-    set activated = true,
-        sec_hash_code = v_sec_hash_code
-    where id = v_turbine_id;
+update public.turbines
+set activated = true,
+    sec_hash_code = v_sec_hash_code
+where id = v_turbine_id;
 
-    return v_sec_hash_code::text;
+return v_sec_hash_code::text;
 end;
 $$;
