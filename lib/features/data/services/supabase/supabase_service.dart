@@ -143,7 +143,7 @@ class SupabaseService extends DbService{
       final response = await supabaseClient.auth.signUp(
         email: email,
         password: password,
-        data: {"fullName":fullName}
+        data: {"full_name":fullName}
       );
       return Success<String>(value: response.session!.user.id);
     } on AuthException catch(e){
